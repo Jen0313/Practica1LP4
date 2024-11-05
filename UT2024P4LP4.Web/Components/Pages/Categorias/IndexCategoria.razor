@@ -1,0 +1,141 @@
+﻿@rendermode InteractiveServer
+@attribute [StreamRendering]
+@page "/categorias"
+@* @using Microsoft.AspNet *@
+<h3>Categorías</h3>
+
+@if (ShowForm)
+{
+	<div class="card">
+		<h5 class="card-header"> Categoria  </h5>
+		<div class="mb-3">
+			<label for="name" class="form-label">Nombre</label>
+			<input type="text" @bind-value="request.Nombre" class="form-control" id="name" rows="3"
+				   disabled="@disableInputs" />
+		</div>
+		<button class=" btn btn-outline-success" @onclick="BtnAccion">
+			@Accion
+		</button>
+		<button class=" btn btn-outline-dark" @onclick="Limpiar">Cancelar</button>
+	</div>
+}
+else
+{
+	<div class="card mb-3 mt-3">
+		<div class="card-header">
+			<span class="btn btn-success" @onclick="HabilitarAgregar">+</span>
+		</div>
+		<div class="card-body">
+			<table class="table">
+				<thead>
+					<tr>
+						<th scope="col">#</th>
+						<th scope="col">Description</th>
+						<th scope="col">Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					@if (Categorias.Count > 0)
+					{
+						@foreach (var cat in Categorias)
+						{
+							<tr @key="cat.Id">
+								<th>@cat.Id</th>
+								<td>@cat.Nombre</td>
+								<td>
+									<div class="btn btn-group">
+										<button class="btn btn-outline-success" @onclick="()=>BtnActualizar(cat)">Actualizar</button>
+										<button class="btn btn-outline-danger" @onclick="()=>BtnEliminar(cat)">Eliminar</button>
+									</div>
+								</td>
+							</tr>
+						}
+					}
+					else
+					{
+						<p> Sin categorias registradas </p>
+					}
+				</tbody>
+			</table>
+		</div>
+
+	</div>
+}
+
+
+
+@code {
+	public bool ShowForm { get; set; }
+	public CategoriaRequest request { get; set; } = new CategoriaRequest();
+	public bool disableInputs { get; set; }
+	public List<CategoriaDto> Categorias { get; set; } = new();
+	public string Accion { get; set; } = Constants.Acciones.Ver;
+
+	#region Ciclo
+	protected override async Task OnInitializedAsync()
+	{
+		await this.CargarCategorias();
+	}
+	#endregion
+
+	public async Task CargarCategorias()
+	{
+		var r = await serv.GetAll();
+		if (r.Succesd)
+		{
+			Categorias = r.Data?.ToList() ?? new();
+		}
+	}
+
+	public void HabilitarAgregar()
+	{
+		Accion = Constants.Acciones.Registrar;
+		request = new();
+		disableInputs = false;
+		ShowForm = true;
+		StateHasChanged();
+	}
+
+	public void Limpiar()
+	{
+		ShowForm = false;
+		disableInputs = true;
+
+		request = new();
+	}
+
+	#region Eventos
+	public void BtnActualizar(CategoriaDto dto)
+	{
+		request = dto.ToRequest();
+		disableInputs = false;
+		ShowForm = true;
+		Accion = Constants.Acciones.Modificar;
+		StateHasChanged();
+
+	}
+	public void BtnEliminar(CategoriaDto dto)
+	{
+		request = dto.ToRequest();
+		disableInputs = true;
+		ShowForm = true;
+		Accion = Constants.Acciones.Eliminar;
+		StateHasChanged();
+	}
+
+	public async Task BtnAccion()
+	{
+		var r = Accion == Constants.Acciones.Modificar ?
+		await serv.Update(request) : Accion == Constants.Acciones.Registrar ?
+		await serv.Create(request) :
+		await serv.Delete(request.Id);
+		if (r.Succesd)
+		{
+			await CargarCategorias();
+			Limpiar();
+		}
+	}
+	#endregion
+
+
+}
